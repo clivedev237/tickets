@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:8080/api/tickets";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export class ApiError extends Error {
   constructor(message, status) {
@@ -8,6 +8,13 @@ export class ApiError extends Error {
 }
 
 async function request(url, options) {
+  if (!BASE_URL) {
+    throw new ApiError(
+      "L'URL du backend n'est pas configurée : ajoutez VITE_API_BASE_URL dans le fichier .env.",
+      0
+    );
+  }
+
   let response;
   try {
     response = await fetch(url, options);
