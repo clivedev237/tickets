@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ticketService } from "../services/ticketService";
-import { STATUT_LABELS } from "../constants";
+import { FILTRES } from "../constants";
 import TicketForm from "./TicketForm";
 import TicketList from "./TicketList";
 
@@ -11,6 +11,7 @@ export default function TicketsPage() {
   const [error, setError] = useState(null);
   const [closeError, setCloseError] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     let annule = false;
@@ -33,6 +34,16 @@ export default function TicketsPage() {
     };
   }, [filtre, reloadKey]);
 
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  function notifier(texte) {
+    setToast({ id: Date.now(), texte });
+  }
+
   function recharger() {
     setLoading(true);
     setError(null);
@@ -40,6 +51,7 @@ export default function TicketsPage() {
   }
 
   function changerFiltre(valeur) {
+    if (valeur === filtre) return;
     setLoading(true);
     setCloseError(null);
     setFiltre(valeur);
@@ -47,8 +59,14 @@ export default function TicketsPage() {
 
   async function creer(titre, description) {
     await ticketService.creer(titre, description); // l'erreur remonte au formulaire
-    setFiltre("");
-    recharger();
+    notifier("Ticket créé.");
+    setCloseError(null);
+    if (filtre !== "") {
+      setLoading(true);
+      setFiltre("");
+    } else {
+      recharger();
+    }
   }
 
   async function fermer(id) {
@@ -60,61 +78,113 @@ export default function TicketsPage() {
           ? prev.filter((t) => t.id !== id)
           : prev.map((t) => (t.id === id ? maj : t))
       );
+      notifier("Ticket fermé.");
     } catch (err) {
       setCloseError(err.message);
       if (err.status === 409 || err.status === 404) recharger();
     }
   }
 
+  const aucunTicket = !loading && !error && tickets.length === 0;
+
   return (
-    <main className="page">
-      <h1>Suivi des tickets de support</h1>
-
-      <TicketForm onCreate={creer} />
-
-      <section className="carte">
-        <div className="barre">
-          <h2>Tickets</h2>
-          <label>
-            Filtrer par statut{" "}
-            <select value={filtre} onChange={(e) => changerFiltre(e.target.value)}>
-              <option value="">Tous</option>
-              {Object.entries(STATUT_LABELS).map(([valeur, label]) => (
-                <option key={valeur} value={valeur}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
+    <div className="app">
+      <header className="entete">
+        <div className="conteneur">
+          <h1>Suivi des tickets</h1>
+          <p>Créez une demande, suivez son statut, fermez-la une fois traitée.</p>
         </div>
+      </header>
 
-        {closeError && (
-          <p className="message erreur" role="alert">
-            {closeError}
-          </p>
-        )}
+      <main className="conteneur grille">
+        <aside className="colonne-formulaire">
+          <TicketForm onCreate={creer} />
+        </aside>
 
-        {loading && (
-          <p className="message" role="status">
-            Chargement des tickets…
-          </p>
-        )}
-
-        {!loading && error && (
-          <div className="message erreur" role="alert">
-            <p>{error}</p>
-            <button onClick={recharger}>Réessayer</button>
+        <section className="panneau liste" aria-labelledby="titre-liste">
+          <div className="barre">
+            <div>
+              <h2 id="titre-liste">Tickets</h2>
+              {!loading && !error && (
+                <p className="compteur">
+                  {tickets.length} {tickets.length > 1 ? "tickets" : "ticket"}
+                </p>
+              )}
+            </div>
+            <div className="segments" role="group" aria-label="Filtrer par statut">
+              {FILTRES.map((f) => (
+                <button
+                  key={f.valeur || "tous"}
+                  type="button"
+                  aria-pressed={filtre === f.valeur}
+                  onClick={() => changerFiltre(f.valeur)}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
 
-        {!loading && !error && tickets.length === 0 && (
-          <p className="message">Aucun ticket</p>
-        )}
+          {closeError && (
+            <p className="alerte alerte--erreur" role="alert">
+              {closeError}
+            </p>
+          )}
 
-        {!loading && !error && tickets.length > 0 && (
-          <TicketList tickets={tickets} onClose={fermer} />
-        )}
-      </section>
-    </main>
+          {loading && (
+            <div role="status" aria-live="polite">
+              <p className="chargement">
+                <span className="spinner" aria-hidden="true" />
+                Chargement des tickets…
+              </p>
+              <div className="squelette" aria-hidden="true">
+                <div /><div /><div /><div />
+              </div>
+            </div>
+          )}
+
+          {!loading && error && (
+            <div className="etat etat--erreur" role="alert">
+              <p className="etat-titre">Impossible de charger les tickets</p>
+              <p>{error}</p>
+              <button className="bouton bouton--plein" onClick={recharger}>
+                Réessayer
+              </button>
+            </div>
+          )}
+
+          {aucunTicket && (
+            <div className="etat">
+              <svg width="72" height="56" viewBox="0 0 72 56" fill="none" aria-hidden="true">
+                <path
+                  d="M6 8h60v14a6 6 0 0 0 0 12v14H6V34a6 6 0 0 0 0-12V8Z"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinejoin="round"
+                />
+                <path d="M46 8v40" stroke="currentColor" strokeWidth="2.5" strokeDasharray="4 5" />
+                <path d="M16 22h20M16 32h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+              </svg>
+              <p className="etat-titre">Aucun ticket</p>
+              <p>
+                {filtre
+                  ? "Aucun ticket ne correspond à ce statut pour le moment."
+                  : "Créez le premier avec le formulaire."}
+              </p>
+            </div>
+          )}
+
+          {!loading && !error && tickets.length > 0 && (
+            <TicketList tickets={tickets} onFermer={fermer} />
+          )}
+        </section>
+      </main>
+
+      {toast && (
+        <div key={toast.id} className="toast" role="status">
+          {toast.texte}
+        </div>
+      )}
+    </div>
   );
 }

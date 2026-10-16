@@ -22,36 +22,52 @@ export default function TicketForm({ onCreate }) {
   }
 
   return (
-    <form className="carte" onSubmit={handleSubmit}>
+    <form className="panneau formulaire" onSubmit={handleSubmit} noValidate>
       <h2>Nouveau ticket</h2>
+      <p className="aide">Décrivez la demande en une phrase, puis ajoutez des détails si besoin.</p>
 
-      <label>
-        Titre
+      <div className="champ">
+        <label htmlFor="titre">Titre</label>
         <input
+          id="titre"
           type="text"
           value={titre}
-          onChange={(e) => setTitre(e.target.value)}
-          placeholder="Ex. : Imprimante en panne"
+          onChange={(e) => {
+            setTitre(e.target.value);
+            setErreur(null);
+          }}
+          placeholder="Ex. : Imprimante en panne au 2e étage"
+          aria-invalid={erreur ? "true" : "false"}
+          aria-describedby={erreur ? "erreur-formulaire" : undefined}
+          autoComplete="off"
         />
-      </label>
+      </div>
 
-      <label>
-        Description (facultative)
+      <div className="champ">
+        <label htmlFor="description">
+          Description <span className="facultatif">(facultative)</span>
+        </label>
         <textarea
-          rows={3}
+          id="description"
+          rows={4}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          placeholder="Contexte, étapes pour reproduire, personnes concernées…"
         />
-      </label>
+      </div>
 
       {erreur && (
-        <p className="message erreur" role="alert">
+        <p id="erreur-formulaire" className="alerte alerte--erreur" role="alert">
           {erreur}
         </p>
       )}
 
-      <button type="submit" disabled={titre.trim() === "" || envoi}>
-        {envoi ? "Création…" : "Créer le ticket"}
+      <button
+        type="submit"
+        className="bouton bouton--plein"
+        disabled={titre.trim() === "" || envoi}
+      >
+        {envoi ? "Création en cours…" : "Créer le ticket"}
       </button>
     </form>
   );

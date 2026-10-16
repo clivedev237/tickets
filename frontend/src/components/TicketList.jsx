@@ -1,74 +1,114 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { STATUT_LABELS } from "../constants";
 
 function formaterDate(iso) {
   return new Date(iso).toLocaleString("fr-FR", {
-    dateStyle: "short",
+    dateStyle: "medium",
     timeStyle: "short",
   });
 }
 
-export default function TicketList({ tickets, onClose }) {
-  const [confirmId, setConfirmId] = useState(null);
-  const [enCoursId, setEnCoursId] = useState(null);
+export default function TicketList({ tickets, onFermer }) {
+  const [aFermer, setAFermer] = useState(null);
+  const [enCours, setEnCours] = useState(false);
+  const dialogRef = useRef(null);
 
-  async function confirmer(id) {
-    setEnCoursId(id);
-    await onClose(id);
-    setEnCoursId(null);
-    setConfirmId(null);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (aFermer && !dialog.open) dialog.showModal();
+    if (!aFermer && dialog.open) dialog.close();
+  }, [aFermer]);
+
+  async function confirmer() {
+    setEnCours(true);
+    await onFermer(aFermer.id);
+    setEnCours(false);
+    setAFermer(null);
   }
 
   return (
-    <table>
-      <thead>
-        <tr>
-          <th>Titre</th>
-          <th>Statut</th>
-          <th>Date de création</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {tickets.map((t) => {
-          const fermable = t.statut === "OUVERT" || t.statut === "EN_COURS";
-          return (
-            <tr key={t.id}>
-              <td>{t.titre}</td>
-              <td>
-                <span className={`badge ${t.statut}`}>
-                  {STATUT_LABELS[t.statut] ?? t.statut}
-                </span>
-              </td>
-              <td>{formaterDate(t.dateCreation)}</td>
-              <td>
-                {!fermable && "—"}
-                {fermable && confirmId !== t.id && (
-                  <button onClick={() => setConfirmId(t.id)}>Fermer</button>
-                )}
-                {fermable && confirmId === t.id && (
-                  <span className="confirmation">
-                    Fermer ce ticket ?{" "}
-                    <button
-                      onClick={() => confirmer(t.id)}
-                      disabled={enCoursId === t.id}
-                    >
-                      {enCoursId === t.id ? "…" : "Oui"}
-                    </button>{" "}
-                    <button
-                      className="secondaire"
-                      onClick={() => setConfirmId(null)}
-                      disabled={enCoursId === t.id}
-                    >
-                      Non
-                    </button>
-                  </span>
-                )}
-              </td>
+    <>
+      <div className="tableau-conteneur">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Titre</th>
+              <th scope="col">Statut</th>
+              <th scope="col">Date de création</th>
+              <th scope="col">Action</th>
             </tr>
-          );
-        })}
-      </tbody>
-    </table>
+          </thead>
+          <tbody>
+            {tickets.map((t) => {
+              const fermable = t.statut === "OUVERT" || t.statut === "EN_COURS";
+              return (
+                <tr key={t.id} className={`ligne ligne--${t.statut}`}>
+                  <td>
+                    <span className="ligne-titre">{t.titre}</span>
+                    {t.description && (
+                      <span className="ligne-description">{t.description}</span>
+                    )}
+                  </td>
+                  <td>
+                    <span className={`badge badge--${t.statut}`}>
+                      {STATUT_LABELS[t.statut] ?? t.statut}
+                    </span>
+                  </td>
+                  <td className="cellule-date">{formaterDate(t.dateCreation)}</td>
+                  <td>
+                    {fermable ? (
+                      <button
+                        className="bouton bouton--contour bouton--petit"
+                        onClick={() => setAFermer(t)}
+                      >
+                        Fermer
+                      </button>
+                    ) : (
+                      <span className="tiret" aria-label="Aucune action disponible">
+                        —
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <dialog
+        ref={dialogRef}
+        className="dialogue"
+        onClose={() => setAFermer(null)}
+        onCancel={(e) => enCours && e.preventDefault()}
+      >
+        {aFermer && (
+          <>
+            <h3>Fermer ce ticket ?</h3>
+            <p>
+              <strong>{aFermer.titre}</strong>
+            </p>
+            <p className="aide">Un ticket fermé ne peut plus changer d'état.</p>
+            <div className="dialogue-actions">
+              <button
+                className="bouton bouton--secondaire"
+                onClick={() => setAFermer(null)}
+                disabled={enCours}
+              >
+                Annuler
+              </button>
+              <button
+                className="bouton bouton--plein"
+                onClick={confirmer}
+                disabled={enCours}
+              >
+                {enCours ? "Fermeture…" : "Fermer le ticket"}
+              </button>
+            </div>
+          </>
+        )}
+      </dialog>
+    </>
   );
 }
