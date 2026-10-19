@@ -3,13 +3,14 @@ import { ticketService } from "../services/ticketService";
 import { FILTRES } from "../constants";
 import TicketList from "./TicketList";
 
-export default function TicketsPage({ notifier }) {
+export default function TicketsPage({ notifier, reloadKey = 0 }) {
   const [tickets, setTickets] = useState([]);
   const [filtre, setFiltre] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [closeError, setCloseError] = useState(null);
-  const [reloadKey, setReloadKey] = useState(0);
+  const [reloadInterne, setReloadInterne] = useState(0);
+  const cleDeRechargement = reloadKey + reloadInterne;
 
   useEffect(() => {
     let annule = false;
@@ -30,12 +31,12 @@ export default function TicketsPage({ notifier }) {
     return () => {
       annule = true;
     };
-  }, [filtre, reloadKey]);
+  }, [filtre, cleDeRechargement]);
 
   function recharger() {
     setLoading(true);
     setError(null);
-    setReloadKey((k) => k + 1);
+    setReloadInterne((k) => k + 1);
   }
 
   function changerFiltre(valeur) {
@@ -132,7 +133,7 @@ export default function TicketsPage({ notifier }) {
           <p>
             {filtre
               ? "Aucun ticket ne correspond à ce statut pour le moment."
-              : "Créez le premier depuis la page « Nouveau ticket »."}
+              : "Créez le premier ticket depuis le formulaire « Nouveau ticket »."}
           </p>
         </div>
       )}
