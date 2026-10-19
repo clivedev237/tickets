@@ -3,7 +3,7 @@ export default function Footer() {
     <footer className="pied-de-page">
       <div className="conteneur pied-contenu">
         <p>
-          © {new Date().getFullYear()} — Suivi des tickets
+          © {new Date().getFullYear()} — Suivi des tickets de clive MASSEM
         </p>
       </div>
     </footer>
